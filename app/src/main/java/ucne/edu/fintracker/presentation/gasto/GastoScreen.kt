@@ -1,6 +1,7 @@
 package ucne.edu.fintracker.presentation.gasto
 
 import android.app.DatePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,23 +22,52 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.threeten.bp.LocalDate
+import org.threeten.bp.OffsetDateTime
+import org.threeten.bp.ZoneOffset
+import org.threeten.bp.format.DateTimeFormatter
+import ucne.edu.fintracker.presentation.limitegasto.LimiteViewModel
+import ucne.edu.fintracker.presentation.remote.dto.CategoriaDto
+import ucne.edu.fintracker.presentation.remote.dto.TransaccionDto
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GastoScreen(
-    categorias: List<String>,
+    categorias: List<CategoriaDto>,
     usuarioId: Int,
+    transaccionParaEditar: TransaccionDto? = null,
     tipoInicial: String = "Gasto",
-    onGuardar: (tipo: String, monto: Double, categoriaNombre: String, fecha: String, notas: String, UsuarioId: Int) -> Unit,
+    onGuardar: (tipo: String, monto: Double, categoriaNombre: String, fecha: String, notas: String, usuarioId: Int) -> Unit,
     onCancel: () -> Unit
 ) {
-    var tipo by remember { mutableStateOf(tipoInicial) }
-    var monto by remember { mutableStateOf(TextFieldValue("")) }
-    var categoriaSeleccionada by remember { mutableStateOf<String?>(null) }
+    var tipo by remember { mutableStateOf(transaccionParaEditar?.tipo ?: tipoInicial) }
+    var monto by remember {
+        mutableStateOf(TextFieldValue(transaccionParaEditar?.monto?.toString() ?: ""))
+    }
+
     var expandedCategoria by remember { mutableStateOf(false) }
-    var fechaSeleccionada by remember { mutableStateOf("Hoy") }
-    var notas by remember { mutableStateOf("") }
+    var fechaSeleccionada by remember {
+        mutableStateOf(transaccionParaEditar?.fecha.toString() ?: "Hoy") }
+
+    var notas by remember { mutableStateOf(transaccionParaEditar?.notas ?: "") }
+
+    var categoriaSeleccionada by remember {
+        mutableStateOf<CategoriaDto?>(null)
+    }
+    val fechaFormato = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+    LaunchedEffect(transaccionParaEditar, categorias) {
+        if (transaccionParaEditar != null) {
+            categoriaSeleccionada = categorias.find { it.categoriaId == transaccionParaEditar.categoriaId }
+
+            fechaSeleccionada = transaccionParaEditar.fecha.format(fechaFormato)
+        } else {
+            categoriaSeleccionada = null
+            fechaSeleccionada = fechaFormato.format(OffsetDateTime.now())
+        }
+    }
+
 
     val context = LocalContext.current
 
@@ -46,11 +76,11 @@ fun GastoScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Agregar Transacción",
+                        text = if (transaccionParaEditar == null) "Agregar Transacción" else "Editar Transacción",
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -58,14 +88,14 @@ fun GastoScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Cerrar",
-                            tint = Color.Black
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Black
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -74,11 +104,10 @@ fun GastoScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Botones Gasto / Ingreso
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
@@ -88,26 +117,25 @@ fun GastoScreen(
                     colors = if (tipo == "Gasto")
                         ButtonDefaults.buttonColors(containerColor = Color(0xFF85D844))
                     else
-                        ButtonDefaults.buttonColors(containerColor = Color(0xFFD3D3D3)),
+                        ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Gasto", color = if (tipo == "Gasto") Color.White else Color.Black)
+                    Text("Gasto", color = if (tipo == "Gasto") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Button(
                     onClick = { tipo = "Ingreso" },
                     colors = if (tipo == "Ingreso")
                         ButtonDefaults.buttonColors(containerColor = Color(0xFF85D844))
                     else
-                        ButtonDefaults.buttonColors(containerColor = Color(0xFFD3D3D3)),
+                        ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = 8.dp)
                 ) {
-                    Text("Ingreso", color = if (tipo == "Ingreso") Color.White else Color.Black)
+                    Text("Ingreso", color = if (tipo == "Ingreso") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
-            // Campo monto
             OutlinedTextField(
                 value = monto,
                 onValueChange = {
@@ -131,21 +159,22 @@ fun GastoScreen(
                     },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black,
-                    focusedLabelColor = Color.Black,
-                    unfocusedLabelColor = Color.Black,
-                    cursorColor = Color.Black
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
 
-            // Categoría
+            val categoriasFiltradas = categorias.filter { it.tipo.equals(tipo, ignoreCase = true) }
+
             ExposedDropdownMenuBox(
                 expanded = expandedCategoria,
                 onExpandedChange = { expandedCategoria = !expandedCategoria }
             ) {
                 OutlinedTextField(
-                    value = categoriaSeleccionada ?: "Seleccionar categoría",
+                    value = categoriaSeleccionada?.nombre ?: "Seleccionar categoría",
                     onValueChange = {},
                     label = { Text("Categoría") },
                     readOnly = true,
@@ -157,20 +186,20 @@ fun GastoScreen(
                         .fillMaxWidth()
                         .menuAnchor(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black,
-                        focusedLabelColor = Color.Black,
-                        unfocusedLabelColor = Color.Black,
-                        cursorColor = Color.Black
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        cursorColor = MaterialTheme.colorScheme.primary
                     )
                 )
                 ExposedDropdownMenu(
                     expanded = expandedCategoria,
                     onDismissRequest = { expandedCategoria = false }
                 ) {
-                    categorias.forEach { cat ->
+                    categoriasFiltradas.forEach { cat ->
                         DropdownMenuItem(
-                            text = { Text(cat) },
+                            text = { Text(cat.nombre) },
                             onClick = {
                                 categoriaSeleccionada = cat
                                 expandedCategoria = false
@@ -190,12 +219,12 @@ fun GastoScreen(
                     Button(
                         onClick = { fechaSeleccionada = dia },
                         colors = if (selected)
-                            ButtonDefaults.buttonColors(containerColor = Color(0xFF85D844))
+                            ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         else
-                            ButtonDefaults.buttonColors(containerColor = Color(0xFFD3D3D3)),
+                            ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(dia, color = if (selected) Color.White else Color.Black)
+                        Text(dia, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
@@ -215,7 +244,8 @@ fun GastoScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.DateRange,
-                        contentDescription = "Seleccionar fecha"
+                        contentDescription = "Seleccionar fecha",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -231,27 +261,56 @@ fun GastoScreen(
                 maxLines = 5,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black,
-                    focusedLabelColor = Color.Black,
-                    unfocusedLabelColor = Color.Black,
-                    cursorColor = Color.Black
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
 
             Button(
                 onClick = {
                     val montoDouble = monto.text.toDoubleOrNull() ?: 0.0
-                    val cat = categoriaSeleccionada ?: ""
+                    val categoriaId = categoriaSeleccionada?.categoriaId ?: 0
 
-                    onGuardar(tipo, montoDouble, cat, fechaSeleccionada, notas, usuarioId)
+                    if (montoDouble <= 0.0 || categoriaId == 0) {
+                        Toast.makeText(context, "Completa los campos correctamente", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
 
-                    // limpiar campos
-                    monto = TextFieldValue("")
-                    notas = ""
-                    categoriaSeleccionada = null
-                    fechaSeleccionada = "Hoy"
-                    tipo = tipoInicial
+                    val fecha = when (fechaSeleccionada) {
+                        "Hoy" -> OffsetDateTime.now()
+                        "Ayer" -> OffsetDateTime.now().minusDays(1)
+                        else -> {
+                            try {
+                                val formatter = DateTimeFormatter.ofPattern("d/M/yyyy")
+                                val localDate = LocalDate.parse(fechaSeleccionada, formatter)
+                                localDate.atStartOfDay().atOffset(ZoneOffset.UTC)
+                            } catch (e: Exception) {
+                                OffsetDateTime.now()
+                            }
+                        }
+                    }
+
+                    val transaccion = TransaccionDto(
+                        transaccionId = transaccionParaEditar?.transaccionId ?: 0,
+                        tipo = tipo,
+                        monto = montoDouble,
+                        categoriaId = categoriaId,
+                        fecha = fecha,
+                        notas = notas,
+                        usuarioId = usuarioId
+                    )
+
+                    onGuardar(
+                        tipo,
+                        montoDouble,
+                        categoriaSeleccionada?.nombre ?: "",
+                        fechaSeleccionada,
+                        notas,
+                        usuarioId
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -260,8 +319,13 @@ fun GastoScreen(
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF85D844))
             ) {
-                Text("Guardar", color = Color.White, fontSize = 18.sp)
+                Text(
+                    if (transaccionParaEditar == null) "Guardar" else "Guardar Cambios",
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontSize = 18.sp
+                )
             }
+
         }
     }
 }

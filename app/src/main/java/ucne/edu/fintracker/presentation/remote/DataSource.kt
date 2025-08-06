@@ -1,12 +1,15 @@
 package ucne.edu.fintracker.presentation.remote
 
 import retrofit2.Response
-import ucne.edu.fintracker.presentation.remote.dto.ResetPasswordRequest
+import ucne.edu.fintracker.presentation.remote.dto.CambiarContrasenaRequest
+//import ucne.edu.fintracker.presentation.remote.dto.CambiarPasswordRequest
 import ucne.edu.fintracker.presentation.remote.dto.UsuarioDto
 import ucne.edu.fintracker.presentation.remote.dto.CategoriaDto
 import ucne.edu.fintracker.presentation.remote.dto.LimiteGastoDto
 import ucne.edu.fintracker.presentation.remote.dto.MetaAhorroDto
 import ucne.edu.fintracker.presentation.remote.dto.PagoRecurrenteDto
+import ucne.edu.fintracker.presentation.remote.dto.TotalAnual
+import ucne.edu.fintracker.presentation.remote.dto.TotalMes
 import ucne.edu.fintracker.presentation.remote.dto.TransaccionDto
 import javax.inject.Inject
 
@@ -18,11 +21,15 @@ class DataSource @Inject constructor(
     suspend fun createUsuario(usuario: UsuarioDto): UsuarioDto = api.createUsuario(usuario)
     suspend fun getUsuario(id: Int): UsuarioDto = api.getUsuario(id)
     suspend fun updateUsuario(id: Int, usuario: UsuarioDto): UsuarioDto = api.updateUsuario(id, usuario)
-    suspend fun deleteUsuario(id: Int) = api.deleteUsuario(id)
-    suspend fun enviarResetPassword(email: String): Boolean {
-        val response = api.enviarLinkResetPassword(ResetPasswordRequest(email))
-        return response.isSuccessful
+    suspend fun cambiarContrasena(usuarioId: Int, request: CambiarContrasenaRequest): Response<Unit> {
+        return api.cambiarContrasena(usuarioId, request)
     }
+
+    suspend fun deleteUsuario(id: Int) = api.deleteUsuario(id)
+//    suspend fun enviarResetPassword(email: String): Boolean {
+//        val response = api.enviarLinkResetPassword(CambiarPasswordRequest(email))
+//        return response.isSuccessful
+//    }
 
     // ------------------- CATEGORÍAS -------------------
     suspend fun getCategorias(): List<CategoriaDto> = api.getCategorias()
@@ -44,7 +51,13 @@ class DataSource @Inject constructor(
     suspend fun updateTransaccion(id: Int, transaccionDto: TransaccionDto): TransaccionDto =
         api.updateTransaccion(id, transaccionDto)
     suspend fun deleteTransaccion(id: Int) = api.deleteTransaccion(id)
+    suspend fun obtenerTotalesPorMes(usuarioId: Int): List<TotalMes> {
+        return api.obtenerTotalesPorMes(usuarioId)
+    }
 
+    suspend fun obtenerTotalesPorAno(usuarioId: Int): List<TotalAnual> {
+        return api.obtenerTotalesPorAno(usuarioId)
+    }
     // ------------------- PAGO RECURRENTE -------------------
     suspend fun getPagoRecurrentes(): List<PagoRecurrenteDto> = api.getPagoRecurrentes()
     suspend fun getPagoRecurrentesPorUsuario(usuarioId: Int): List<PagoRecurrenteDto> =
@@ -75,7 +88,7 @@ class DataSource @Inject constructor(
 
     suspend fun createMetaAhorro(metaAhorroDto: MetaAhorroDto): MetaAhorroDto = api.createMetaAhorro(metaAhorroDto)
     suspend fun getMetaAhorro(id: Int): MetaAhorroDto = api.getMetaAhorro(id)
-    suspend fun updateMetaAhorro(id: Int, metaAhorroDto: MetaAhorroDto): MetaAhorroDto =
+    suspend fun updateMetaAhorro(id: Int, metaAhorroDto: MetaAhorroDto): Response<Unit> =
         api.updateMetaAhorro(id, metaAhorroDto)
     suspend fun deleteMetaAhorro(id: Int) = api.deleteMetaAhorro(id)
 }

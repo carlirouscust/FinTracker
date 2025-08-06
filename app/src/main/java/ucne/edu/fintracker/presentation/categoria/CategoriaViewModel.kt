@@ -46,6 +46,14 @@ class CategoriaViewModel @Inject constructor(
         }
     }
 
+    fun getCategoriasFiltradas(): List<CategoriaDto> {
+        val state = _uiState.value
+        return if (state.filtroTipo.isBlank()) {
+            state.categorias
+        } else {
+            state.categorias.filter { it.tipo == state.filtroTipo }
+        }
+    }
 
     fun fetchCategorias(usuarioId: Int) {
         if (usuarioId == 0) {
@@ -57,9 +65,16 @@ class CategoriaViewModel @Inject constructor(
                 when (result) {
                     is Resource.Success -> {
                         result.data?.let { categorias ->
-                            _uiState.update { it.copy(categorias = categorias, isLoading = false, error = null) }
+                            _uiState.update {
+                                it.copy(
+                                    categorias = categorias,
+                                    isLoading = false,
+                                    error = null,
+                                    filtroTipo = ""
+                                )
+                            }
                         } ?: run {
-                            _uiState.update { it.copy(isLoading = false) }
+                            _uiState.update { it.copy(isLoading = false, filtroTipo = "") }
                         }
                     }
                     is Resource.Error -> {
@@ -139,6 +154,18 @@ class CategoriaViewModel @Inject constructor(
         _uiState.update { it.copy(tipo = value) }
     }
 
+    fun onFiltroTipoChange(filtro: String) {
+        _uiState.update { it.copy(filtroTipo = filtro) }
+    }
+
+    fun inicializarSinFiltro() {
+        _uiState.update { it.copy(filtroTipo = "") }
+    }
+
+    fun limpiarFiltro() {
+        _uiState.update { it.copy(filtroTipo = "") }
+    }
+
     fun onIconoChange(value: String) {
         _uiState.update { it.copy(icono = value) }
     }
@@ -146,8 +173,4 @@ class CategoriaViewModel @Inject constructor(
     fun onColorChange(value: String) {
         _uiState.update { it.copy(colorFondo = value) }
     }
-
-
-
-
 }

@@ -22,8 +22,11 @@ interface FinTrackerApi {
         @DELETE("api/Usuarios/{id}")
         suspend fun deleteUsuario(@Path("id") id: Int)
 
-        @POST("usuarios/resetpassword")
-        suspend fun enviarLinkResetPassword(@Body request: ResetPasswordRequest): Response<Unit>
+        @PUT("api/Usuarios/{id}/cambiarContrasena")
+        suspend fun cambiarContrasena(
+                @Path("id") usuarioId: Int,
+                @Body request: CambiarContrasenaRequest
+        ): Response<Unit>
 
         // -------- Transacciones --------
         @GET("api/Transacciones")
@@ -43,6 +46,16 @@ interface FinTrackerApi {
 
         @DELETE("api/Transacciones/{id}")
         suspend fun deleteTransaccion(@Path("id") id: Int)
+
+        @GET("api/Transacciones/totales-mensuales/{usuarioId}")
+        suspend fun obtenerTotalesPorMes(
+                @Path("usuarioId") usuarioId: Int
+        ): List<TotalMes>
+
+        @GET("api/Transacciones/totales-anuales/{usuarioId}")
+        suspend fun obtenerTotalesPorAno(
+                @Path("usuarioId") usuarioId: Int
+        ): List<TotalAnual>
 
         // -------- Pago recurrente --------
         @GET("api/PagoRecurrentes")
@@ -80,7 +93,7 @@ interface FinTrackerApi {
         suspend fun getMetaAhorro(@Path("id") id: Int): MetaAhorroDto
 
         @PUT("api/MetaAhorros/{id}")
-        suspend fun updateMetaAhorro(@Path("id") id: Int, @Body metaAhorroDto: MetaAhorroDto): MetaAhorroDto
+        suspend fun updateMetaAhorro(@Path("id") id: Int, @Body metaAhorroDto: MetaAhorroDto): Response<Unit>
 
         @DELETE("api/MetaAhorros/{id}")
         suspend fun deleteMetaAhorro(@Path("id") id: Int)

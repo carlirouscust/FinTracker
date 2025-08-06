@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import ucne.edu.fintracker.presentation.remote.FinTrackerApi
-import ucne.edu.fintracker.presentation.remote.dto.ResetPasswordRequest
+// import ucne.edu.fintracker.presentation.remote.dto.CambiarPasswordRequest
 
 
 @Composable
@@ -97,22 +97,22 @@ fun ResetPasswordScreen(
                 }
 
                 scope.launch {
-                    try {
-
-                        val response = finTrackerApi.enviarLinkResetPassword(ResetPasswordRequest(email))
-                        if (response.isSuccessful) {
-                            Toast
-                                .makeText(context, "Revisa tu correo para el reinicio", Toast.LENGTH_LONG)
-                                .show()
-                            navController.popBackStack()
-                        } else {
-                            Toast
-                                .makeText(context, "Correo no encontrado o error del servidor", Toast.LENGTH_LONG)
-                                .show()
-                        }
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
+//                    try {
+//
+//                        val response = finTrackerApi.enviarLinkResetPassword(CambiarPasswordRequest(email))
+//                        if (response.isSuccessful) {
+//                            Toast
+//                                .makeText(context, "Revisa tu correo para el reinicio", Toast.LENGTH_LONG)
+//                                .show()
+//                            navController.popBackStack()
+//                        } else {
+//                            Toast
+//                                .makeText(context, "Correo no encontrado o error del servidor", Toast.LENGTH_LONG)
+//                                .show()
+//                        }
+//                    } catch (e: Exception) {
+//                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+//                    }
                 }
             },
             modifier = Modifier

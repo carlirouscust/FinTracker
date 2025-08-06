@@ -31,12 +31,12 @@ fun PagoListScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(16.dp),
 
                 verticalAlignment = Alignment.CenterVertically
@@ -45,15 +45,25 @@ fun PagoListScreen(
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Volver",
-                        tint = Color.Black
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Pagos Recurrente",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color.Black
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Pagos Recurrente",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -75,7 +85,7 @@ fun PagoListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
@@ -87,13 +97,13 @@ fun PagoListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = uiState.error ?: "Error desconocido",
-                        color = Color.Red,
+                        color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -103,7 +113,7 @@ fun PagoListScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White),
+                        .background(MaterialTheme.colorScheme.background),
                     contentPadding = padding
                 ) {
                     items(uiState.pagos) { pago ->
@@ -113,7 +123,7 @@ fun PagoListScreen(
                         val colorFondo = try {
                             Color(android.graphics.Color.parseColor(categoria?.colorFondo ?: "#EFEFEF"))
                         } catch (e: Exception) {
-                            Color(0xFFEFEFEF)
+                            MaterialTheme.colorScheme.surfaceVariant
                         }
 
                         var isActivo by remember { mutableStateOf(pago.activo) }
@@ -150,7 +160,7 @@ fun PagoListScreen(
                                 Text(
                                     text = "RD$ ${pago.monto} • ${pago.frecuencia}",
                                     fontSize = 14.sp,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
@@ -162,7 +172,12 @@ fun PagoListScreen(
                                         pago.pagoRecurrenteId,
                                         pago.copy(activo = checked)
                                     )
-                                }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                    checkedTrackColor = Color(0xFF8BC34A),
+                                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant                                )
                             )
                         }
 

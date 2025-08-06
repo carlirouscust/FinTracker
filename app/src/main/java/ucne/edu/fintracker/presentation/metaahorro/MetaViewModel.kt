@@ -8,60 +8,66 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.threeten.bp.OffsetDateTime
 import ucne.edu.fintracker.data.local.repository.MetaRepository
+import ucne.edu.fintracker.presentation.remote.DataSource
 import ucne.edu.fintracker.presentation.remote.Resource
 import ucne.edu.fintracker.presentation.remote.dto.MetaAhorroDto
 import javax.inject.Inject
 
 @HiltViewModel
 class MetaViewModel @Inject constructor(
-    private val metaRepository: MetaRepository
+    private val metaRepository: MetaRepository,
+    private val dataSource: DataSource
 ) : ViewModel() {
 
     private var usuarioId: Int = 0
+
+    fun setUsuarioId(id: Int) {
+        Log.d("MetaVM", "UsuarioId seteado a $id")
+        usuarioId = id
+    }
 
     private val _uiState = MutableStateFlow(
         MetaUiState(
             metas = emptyList(),
             isLoading = false,
             error = null,
-            metaCreada = false
+            metaCreada = false,
+            metaSeleccionada = null
         )
     )
     val uiState: StateFlow<MetaUiState> = _uiState
 
-    fun cargarMetas(idUsuario: Int) {
-        usuarioId = idUsuario
-        Log.d("MetaVM", "usuarioId en ViewModel antes de crear: $usuarioId")
+    fun cargarMetas(usuarioId: Int, metaId: Int? = null) {
         viewModelScope.launch {
-            metaRepository.getMetas(usuarioId).collect { result ->
-                when (result) {
-                    is Resource.Loading -> {
-                        Log.d("MetaVM", "Cargando metas... [LOADING]")
-                        _uiState.update { it.copy(isLoading = true, error = null) }
-                    }
-                    is Resource.Success -> {
-                        Log.d("MetaVM", "Metas cargadas correctamente: ${result.data}")
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                metas = result.data ?: emptyList(),
-                                error = null
-                            )
-                        }
-                    }
-                    is Resource.Error -> {
-                        Log.e("MetaVM", "Error al cargar metas: ${result.message}")
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = result.message ?: "Error desconocido"
-                            )
-                        }
-                    }
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            try {
+                val metas = dataSource.getMetaAhorrosPorUsuario(usuarioId)
+                val metaSeleccionada = metaId?.let { id -> metas.find { it.metaAhorroId == id } }
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        metas = metas,
+                        metaSeleccionada = metaSeleccionada
+                    )
+                }
+
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Error: ${e.message}"
+                    )
                 }
             }
         }
+    }
+
+    fun obtenerMetas(metaId: Int): MetaAhorroDto? {
+        return _uiState.value.metas.find { it.metaAhorroId == metaId }
     }
 
     fun crearMeta(metaDto: MetaAhorroDto, usuarioId: Int) {
@@ -108,7 +114,7 @@ class MetaViewModel @Inject constructor(
 
 
     fun actualizarMeta(id: Int, metaDto: MetaAhorroDto) {
-        Log.d("MetaVM", "Actualizando meta con ID $id para usuarioId: $usuarioId")
+        Log.d("MetaVM", "Iniciando actualización meta ID=$id con datos: $metaDto")
         viewModelScope.launch {
             metaRepository.updateMeta(id, metaDto.copy(usuarioId = usuarioId)).collect { result ->
                 when (result) {
@@ -117,14 +123,11 @@ class MetaViewModel @Inject constructor(
                         _uiState.update { it.copy(isLoading = true, error = null) }
                     }
                     is Resource.Success -> {
-                        Log.d("MetaVM", "Meta actualizada correctamente: ${result.data}")
-                        val listaActualizada = _uiState.value.metas.map {
-                            if (it.metaAhorroId == id) result.data ?: it else it
-                        }
+                        cargarMetas(usuarioId)
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                metas = listaActualizada,
+                                metaSeleccionada = null,
                                 error = null
                             )
                         }
@@ -141,6 +144,15 @@ class MetaViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun actualizarMontoAhorrado(metaId: Int, montoAhorrado: Double, fechaMonto: OffsetDateTime) {
+        val metaActual = obtenerMetas(metaId) ?: return
+        val metaActualizada = metaActual.copy(
+            montoAhorrado = montoAhorrado,
+            fechaMontoAhorrado = fechaMonto
+        )
+        actualizarMeta(metaId, metaActualizada)
     }
 
     fun eliminarMeta(id: Int) {

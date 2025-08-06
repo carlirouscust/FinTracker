@@ -1,6 +1,5 @@
 package ucne.edu.fintracker.presentation.metaahorro
 
-import android.app.DatePickerDialog
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -20,37 +20,39 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
+import org.threeten.bp.format.DateTimeFormatter
 import org.threeten.bp.OffsetDateTime
 import org.threeten.bp.ZoneOffset
-import org.threeten.bp.format.DateTimeFormatter
+
 import java.util.Calendar
 import ucne.edu.fintracker.presentation.remote.dto.MetaAhorroDto
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MetaMontoAhorroScreen(
+fun MetaMAhorroScreen(
     meta: MetaAhorroDto,
     onGuardarMonto: (Double, OffsetDateTime) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
 
-    var monto by remember { mutableStateOf("") }
-    var fechaMonto by remember { mutableStateOf(OffsetDateTime.now(ZoneOffset.UTC)) }
+    var montoAhorrado by remember { mutableStateOf("") }
+    var fechaMonto by remember { mutableStateOf(meta.fechaMontoAhorrado ?: OffsetDateTime.now(ZoneOffset.UTC)) }
 
     val fechaFormatter = DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy")
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Agregar Monto Ahorro",
+                        text = "Agregar Ahorro",
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = Color.Black
                     )
                 },
                 navigationIcon = {
@@ -58,24 +60,23 @@ fun MetaMontoAhorroScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Cerrar",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = Color.Black
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = Color.White,
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Black
                 )
             )
         },
         bottomBar = {
             Button(
                 onClick = {
-                    if (monto.isNotBlank()) {
-                        onGuardarMonto(monto.toDoubleOrNull() ?: 0.0, fechaMonto)
-                        monto = ""
-                        fechaMonto = OffsetDateTime.now(ZoneOffset.UTC)
+                    val monto = montoAhorrado.toDoubleOrNull()
+                    if (monto != null) {
+                        onGuardarMonto(monto, fechaMonto)
                     } else {
                         Toast.makeText(context, "Ingrese un monto válido", Toast.LENGTH_SHORT).show()
                     }
@@ -83,12 +84,11 @@ fun MetaMontoAhorroScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Text(
-                    "Guardar Monto",
-                    color = MaterialTheme.colorScheme.onPrimary
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF8BC34A)
                 )
+            ) {
+                Text("Guardar Ahorro", color = Color.White)
             }
         }
     ) { padding ->
@@ -96,10 +96,10 @@ fun MetaMontoAhorroScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(Color.White)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (meta.imagen != null) {
                 Image(
@@ -115,17 +115,17 @@ fun MetaMontoAhorroScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(Color(0xFFEFEFEF)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Sin imagen", color = MaterialTheme.colorScheme.onSurface)
+                    Text("Sin imagen", color = Color.Gray)
                 }
             }
 
             Text(
                 text = "Meta: RD$ ${meta.montoObjetivo}",
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.Black,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
@@ -133,27 +133,21 @@ fun MetaMontoAhorroScreen(
             Text(
                 text = "Fecha límite: ${meta.fechaFinalizacion.format(fechaFormatter)}",
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Color.DarkGray,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
 
             OutlinedTextField(
-                value = monto,
-                onValueChange = { monto = it },
-                label = { Text("Monto de ahorro (RD$)", color = MaterialTheme.colorScheme.onSurface) },
+                value = montoAhorrado,
+                onValueChange = { montoAhorrado = it },
+                label = { Text("Monto Ahorrado (RD$)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    cursorColor = MaterialTheme.colorScheme.primary
-                )
+                modifier = Modifier.fillMaxWidth()
             )
 
-            FechaMontoSelector(
-                label = "Fecha del monto",
+            FechaSelector(
+                label = "Fecha de Monto Ahorrado",
                 fecha = fechaMonto,
                 onFechaSeleccionada = { fechaMonto = it }
             )
@@ -162,9 +156,9 @@ fun MetaMontoAhorroScreen(
 }
 
 @Composable
-private fun FechaMontoSelector(
+private fun FechaSelector(
     label: String,
-    fecha: OffsetDateTime,
+    fecha: OffsetDateTime?,
     onFechaSeleccionada: (OffsetDateTime) -> Unit
 ) {
     val context = LocalContext.current
@@ -176,23 +170,16 @@ private fun FechaMontoSelector(
         verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedTextField(
-            value = fecha.format(formatter),
+            value = fecha?.format(formatter) ?: "",
             onValueChange = {},
-            label = { Text(label, color = MaterialTheme.colorScheme.onSurface) },
+            label = { Text(label) },
             modifier = Modifier.weight(1f),
-            readOnly = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                cursorColor = MaterialTheme.colorScheme.primary,
-                disabledTextColor = MaterialTheme.colorScheme.onSurface // Color del texto cuando está deshabilitado
-            )
+            readOnly = true
         )
         IconButton(
             onClick = {
                 val calendario = Calendar.getInstance()
-                DatePickerDialog(
+                android.app.DatePickerDialog(
                     context,
                     { _, year, month, dayOfMonth ->
                         val seleccionada = OffsetDateTime.of(
@@ -210,8 +197,7 @@ private fun FechaMontoSelector(
         ) {
             Icon(
                 imageVector = Icons.Default.DateRange,
-                contentDescription = "Seleccionar fecha",
-                tint = MaterialTheme.colorScheme.primary
+                contentDescription = "Seleccionar fecha"
             )
         }
     }

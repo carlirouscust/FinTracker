@@ -1,7 +1,6 @@
 package ucne.edu.fintracker.presentation.limitegasto
 
 import android.util.Log
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +13,7 @@ import ucne.edu.fintracker.data.local.repository.CategoriaRepository
 import ucne.edu.fintracker.presentation.remote.Resource
 import ucne.edu.fintracker.presentation.remote.dto.CategoriaDto
 import ucne.edu.fintracker.presentation.remote.dto.LimiteGastoDto
-import ucne.edu.fintracker.presentation.remote.dto.UsuarioDto
+
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,7 +21,7 @@ class LimiteViewModel @Inject constructor(
     private val limiteRepository: LimiteRepository,
     private val categoriaRepository: CategoriaRepository,
 
-) : ViewModel() {
+    ) : ViewModel() {
 
     private var usuarioIdActual: Int? = null
     private val _uiState = MutableStateFlow(

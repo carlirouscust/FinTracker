@@ -1,5 +1,6 @@
 package ucne.edu.fintracker.presentation.ajustes
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,100 +39,137 @@ fun AjustesListScreen(
     onCentroAyuda: () -> Unit = {},
     onSoporte: () -> Unit = {}
 ) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
-    MenuScreen(
-        drawerState = drawerState,
-        navController = navController,
-        content = {
-            Scaffold(
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = "Ajustes",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = Color.Black,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Menu")
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Ajustes",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 },
-                bottomBar = {
-                    NavigationBar(containerColor = Color.White) {
-                        val navBackStackEntry by navController.currentBackStackEntryAsState()
-                        val currentRoute = navBackStackEntry?.destination?.route
-
-                        NavigationBarItem(
-                            selected = currentRoute == "gastos",
-                            onClick = { navController.navigate("gastos") },
-                            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                            label = { Text("Home") }
-                        )
-
-                        NavigationBarItem(
-                            selected = currentRoute == "chatIA",
-                            onClick = { navController.navigate("chatIA/$usuarioId") },
-                            icon = { Icon(Icons.Default.Assistant, contentDescription = "IA Asesor") },
-                            label = { Text("IA Asesor") }
-                        )
-
-                        NavigationBarItem(
-                            selected = currentRoute == "metaahorros/$usuarioId",
-                            onClick = {
-                                navController.navigate("metaahorros/$usuarioId") {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                }
-                            },
-                            icon = { Icon(Icons.Default.Star, contentDescription = "Metas") },
-                            label = { Text("Metas") }
-                        )
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = MaterialTheme.colorScheme.onSurface)
                     }
-                }
-            ) { paddingValues ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White)
-                        .verticalScroll(rememberScrollState())
-                        .padding(paddingValues)
-                        .padding(16.dp)
-                ) {
-                    AjustesSeccion(titulo = "Cuenta") {
-                        ItemAjuste("Información del perfil", "Editar información personal", Icons.Default.Person, onEditarPerfil)
-                        ItemAjuste("Contraseña", "Cambiar contraseña", Icons.Default.Lock, onCambiarContrasena)
-                        ItemAjuste("Cerrar sesión", "Cerrar sesión de perfil", Icons.Default.ExitToApp, onCerrarSesion, Color.Red)
-                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                NavigationBarItem(
+                    selected = currentRoute == "gastos",
+                    onClick = { navController.navigate("gastos") },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    label = { Text("Home") }
+                )
 
-                    AjustesSeccion(titulo = "Preferencias de la aplicación") {
-                        ItemAjuste("Notificaciones", "Gestionar notificaciones", Icons.Default.Notifications, onNotificaciones)
-                        ItemAjuste("Apariencia", "Cambiar apariencia de la aplicación", Icons.Default.Palette, onApariencia)
-                    }
+                NavigationBarItem(
+                    selected = currentRoute == "chatIA",
+                    onClick = { navController.navigate("chatIA/$usuarioId") },
+                    icon = { Icon(Icons.Default.Assistant, contentDescription = "IA Asesor") },
+                    label = { Text("IA Asesor") }
+                )
 
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    AjustesSeccion(titulo = "Ayuda y soporte") {
-                        ItemAjuste("Centro de ayuda", "Preguntas frecuentes", Icons.Default.Help, onCentroAyuda)
-                        ItemAjuste("Soporte", "Contactar con soporte", Icons.Default.Support, onSoporte)
-                    }
-                }
+                NavigationBarItem(
+                    selected = currentRoute == "metaahorros/$usuarioId",
+                    onClick = {
+                        navController.navigate("metaahorros/$usuarioId") {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Star, contentDescription = "Metas") },
+                    label = { Text("Metas") }
+                )
             }
         }
-    )
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            AjustesSeccion(titulo = "Cuenta") {
+                ItemAjuste("Información del perfil", "Editar información personal", Icons.Default.Person, onEditarPerfil)
+                ItemAjuste("Contraseña", "Cambiar contraseña", Icons.Default.Lock, onCambiarContrasena)
+                ItemAjuste(
+                    "Cerrar sesión", "Cerrar sesión de perfil", Icons.Default.ExitToApp,
+                    onClick = { showLogoutDialog = true },
+                    colorIcono = Color.Red
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            AjustesSeccion(titulo = "Preferencias de la aplicación") {
+                ItemAjuste("Notificaciones", "Gestionar notificaciones", Icons.Default.Notifications, onNotificaciones)
+                ItemAjuste("Apariencia", "Cambiar apariencia de la aplicación", Icons.Default.Palette, onApariencia)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            AjustesSeccion(titulo = "Ayuda y soporte") {
+                ItemAjuste("Centro de ayuda", "Preguntas frecuentes", Icons.Default.Help, onCentroAyuda)
+                ItemAjuste("Soporte", "Contactar con soporte", Icons.Default.Support, onSoporte)
+            }
+        }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text(
+                    text = "Cerrar sesión",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "¿Está seguro que quiere cerrar la sesión?",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        onCerrarSesion()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Sí, cerrar sesión", color = MaterialTheme.colorScheme.onError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar", color = MaterialTheme.colorScheme.primary)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 }
 
 @Composable
@@ -141,7 +179,7 @@ fun AjustesSeccion(titulo: String, contenido: @Composable ColumnScope.() -> Unit
             text = titulo,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         contenido()
@@ -154,7 +192,7 @@ fun ItemAjuste(
     subtitulo: String,
     icono: ImageVector,
     onClick: () -> Unit,
-    colorIcono: Color = Color(0xFF2F2F2F)
+    colorIcono: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Row(
         modifier = Modifier
@@ -166,7 +204,7 @@ fun ItemAjuste(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(Color(0xFFF1F1F1), shape = CircleShape),
+                .background(MaterialTheme.colorScheme.surfaceVariant, shape = CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -178,7 +216,7 @@ fun ItemAjuste(
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = titulo, color = colorIcono, fontWeight = FontWeight.SemiBold)
-            Text(text = subtitulo, color = Color.Gray, fontSize = 13.sp)
+            Text(text = subtitulo, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
         }
     }
 }

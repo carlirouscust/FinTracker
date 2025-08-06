@@ -43,7 +43,7 @@ fun CategoriaScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -51,23 +51,23 @@ fun CategoriaScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Cerrar",
-                            tint = Color.Black
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Black
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
@@ -86,7 +86,7 @@ fun CategoriaScreen(
                     Spacer(Modifier.height(16.dp))
                     Text(
                         "Elige un icono",
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
                     )
 
@@ -111,11 +111,11 @@ fun CategoriaScreen(
                                             .clip(RoundedCornerShape(8.dp))
                                             .border(
                                                 width = 1.dp,
-                                                color = if (state.icono == icon) Color(0xFF85D844) else Color(0xFFDDDDDD),
+                                                color = if (state.icono == icon) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                                                 shape = RoundedCornerShape(8.dp)
                                             )
                                             .background(
-                                                if (state.icono == icon) Color(0x1A85D844) else Color.Transparent,
+                                                if (state.icono == icon) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
                                                 shape = RoundedCornerShape(8.dp)
                                             )
                                             .clickable { viewModel.onIconoChange(icon) },
@@ -135,7 +135,7 @@ fun CategoriaScreen(
                     }
 
                     Spacer(Modifier.height(16.dp))
-                    Text("Cambiar color de fondo", color= Color.Black)
+                    Text("Cambiar color de fondo", color = MaterialTheme.colorScheme.onBackground)
 
 
                     val colores = listOf("#FF3B30","#007AFF","#34C759","#FFCC00","#AF52DE","#5AC8FA")
@@ -150,7 +150,7 @@ fun CategoriaScreen(
                                     .background(color)
                                     .border(
                                         width = 3.dp,
-                                        color = if (state.colorFondo == hex) Color.Black else Color.Transparent,
+                                        color = if (state.colorFondo == hex) MaterialTheme.colorScheme.onSurface else Color.Transparent,
                                         shape = CircleShape
                                     )
                                     .clickable { viewModel.onColorChange(hex) }

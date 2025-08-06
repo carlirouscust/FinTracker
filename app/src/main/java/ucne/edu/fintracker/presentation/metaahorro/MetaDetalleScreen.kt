@@ -3,6 +3,7 @@ package ucne.edu.fintracker.presentation.metaahorro
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
@@ -18,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import org.threeten.bp.OffsetDateTime
 import org.threeten.bp.format.DateTimeFormatter
@@ -112,6 +114,60 @@ fun MetaDetalleScreen(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
+            val montoAhorrado = meta.montoAhorrado ?: 0.0
+            val porcentajeProgreso = if (meta.montoObjetivo > 0) {
+                ((montoAhorrado / meta.montoObjetivo) * 100).coerceAtLeast(0.0)
+            } else 0.0
+
+            val colorProgreso = when {
+                porcentajeProgreso <= 100 -> Color(0xFF4CAF50)
+                porcentajeProgreso <= 120 -> Color(0xFFFFC107)
+                else -> Color(0xFFF44336)
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp)
+                        .background(Color(0xFFE0E0E0), shape = RoundedCornerShape(12.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(((porcentajeProgreso / 100).coerceAtMost(1.0)).toFloat())
+                            .background(colorProgreso, shape = RoundedCornerShape(12.dp))
+                    )
+
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${porcentajeProgreso.toInt()}%",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Progreso: RD$ ${String.format("%.2f", montoAhorrado)} / RD$ ${String.format("%.2f", meta.montoObjetivo)}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center
+                )
+            }
+
 
             Divider()
             Text(

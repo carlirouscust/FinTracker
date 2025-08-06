@@ -137,6 +137,7 @@ fun GastoListScreen(
     MenuScreen(
         drawerState = drawerState,
         navController = navController,
+        usuarioId = usuarioId,
         content = {
             Scaffold(
                 topBar = {
@@ -159,7 +160,9 @@ fun GastoListScreen(
                                 )
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
                     )
                 },
                 floatingActionButton = {
@@ -180,7 +183,7 @@ fun GastoListScreen(
                 },
                 bottomBar = {
                         NavigationBar(
-                            containerColor = Color.White,
+                            containerColor = MaterialTheme.colorScheme.surface,
                         ) {
                             NavigationBarItem(
                                 selected = true,
@@ -218,7 +221,7 @@ fun GastoListScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(paddingValues)
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -292,7 +295,12 @@ fun GastoListScreen(
                         "Semana" -> {
                             val inicioSemana = fechaActual.with(DayOfWeek.MONDAY)
                             val finSemana = inicioSemana.plusDays(6)
-                            "${inicioSemana.dayOfMonth} al ${finSemana.dayOfMonth}"
+
+                            val formatter = DateTimeFormatter.ofPattern("d 'de' MMM", Locale("es"))
+                            val inicioStr = inicioSemana.format(formatter).lowercase()
+                            val finStr = finSemana.format(formatter).lowercase()
+
+                            "$inicioStr al $finStr"
                         }
                         "Mes" -> "${fechaActual.month.getDisplayName(TextStyle.FULL, Locale("es")).replaceFirstChar { it.uppercase() }} ${fechaActual.year}"
                         "Año" -> "${fechaActual.year}"
@@ -410,7 +418,11 @@ fun GastoListScreen(
                                         }
 
                                         Card(
-                                            modifier = Modifier.fillMaxWidth(),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    navController.navigate("gasto_detalle/$usuarioId/${transaccion.transaccionId}")
+                                                },
                                             elevation = CardDefaults.cardElevation(2.dp)
                                         ) {
                                             Row(

@@ -21,7 +21,6 @@ import ucne.edu.fintracker.presentation.categoria.CategoriaScreen
 import ucne.edu.fintracker.presentation.categoria.CategoriaViewModel
 import ucne.edu.fintracker.presentation.gasto.GastoListScreen
 import ucne.edu.fintracker.presentation.gasto.GastoScreen
-import ucne.edu.fintracker.presentation.gasto.GastoViewModel
 import ucne.edu.fintracker.presentation.login.LoginViewModel
 import ucne.edu.fintracker.presentation.login.LoginRegisterScreen
 import ucne.edu.fintracker.presentation.remote.FinTrackerApi
@@ -50,14 +49,24 @@ import ucne.edu.fintracker.presentation.pagorecurrente.PagoDetalleScreen
 import ucne.edu.fintracker.presentation.pagorecurrente.PagoListScreen
 import ucne.edu.fintracker.presentation.pagorecurrente.PagoScreen
 import ucne.edu.fintracker.presentation.pagorecurrente.PagoViewModel
+import ucne.edu.fintracker.presentation.gasto.GastoViewModel
 import ucne.edu.fintracker.presentation.panelUsuario.PanelUsuarioScreen
 import ucne.edu.fintracker.presentation.remote.dto.LimiteGastoDto
 import ucne.edu.fintracker.presentation.remote.dto.MetaAhorroDto
 import ucne.edu.fintracker.presentation.remote.dto.PagoRecurrenteDto
-import ucne.edu.fintracker.MainActivity
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
+import ucne.edu.fintracker.presentation.ajustes.AparienciaScreen
+import ucne.edu.fintracker.presentation.ajustes.NotificacionesScreen
+import ucne.edu.fintracker.presentation.gasto.GastoDetalleScreen
+import ucne.edu.fintracker.presentation.gasto.GraficoScreen
 import ucne.edu.fintracker.presentation.login.DataLogin
+import ucne.edu.fintracker.presentation.metaahorro.MetaMAhorroScreen
+import ucne.edu.fintracker.presentation.panelUsuario.CambiarContrasenaScreen
+import ucne.edu.fintracker.presentation.panelUsuario.CambiarFotoScreen
+import org.threeten.bp.OffsetDateTime
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,7 +109,11 @@ fun FinTrackerNavHost(
                 val tipo = backStackEntry.arguments?.getString("tipo") ?: "Gasto"
                 val categoriaVM = hiltViewModel<CategoriaViewModel>()
                 val loginState = loginViewModel.uiState.collectAsState().value
-                val usuarioId = loginState.usuarioId
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
 
                 LaunchedEffect(usuarioId) {
                     if (usuarioId != 0) {
@@ -116,16 +129,17 @@ fun FinTrackerNavHost(
                     onAgregarCategoriaClick = { tipoActual ->
                         navHostController.navigate("categoria_nueva/$tipoActual")
                     },
-                    onCategoriaClick = { categoria ->
-                        navHostController.navigate("categoria_detalle/${categoria.categoriaId}")
-                    }
                 )
             }
 
             composable("categoria_nueva/{tipo}") { backStackEntry ->
                 val tipo = backStackEntry.arguments?.getString("tipo") ?: "Gasto"
                 val categoriaVM = hiltViewModel<CategoriaViewModel>()
-                val usuarioId = loginViewModel.uiState.collectAsState().value.usuarioId ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 Log.d("CategoriaNueva", "usuarioId: $usuarioId")
 
 
@@ -230,7 +244,7 @@ fun FinTrackerNavHost(
 
                 if (usuarioId != 0) {
                     GastoScreen(
-                        categorias = categoriasFiltradas.map { it.nombre },
+                        categorias = categoriasFiltradas,
                         tipoInicial = tipoInicial,
                         usuarioId = usuarioId,
                         onGuardar = { tipoSeleccionado, monto, categoriaNombre, fechaStr, notas, usuarioIdGuardado ->
@@ -272,10 +286,126 @@ fun FinTrackerNavHost(
                 }
             }
 
+            composable(
+                route = "gasto_detalle/{usuarioId}/{trasaccionId}",
+                arguments = listOf(
+                    navArgument("usuarioId") { type = NavType.IntType },
+                    navArgument("trasaccionId") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
+                val trasaccionId = backStackEntry.arguments?.getInt("trasaccionId") ?: 0
+                val gastoViewModel = hiltViewModel<GastoViewModel>()
+
+                LaunchedEffect(usuarioId) {
+                    if (usuarioId != 0) {
+                        gastoViewModel.cargarTransacciones(usuarioId)
+                        gastoViewModel.fetchCategorias(usuarioId)
+                    }
+                }
+
+                val uiState by gastoViewModel.uiState.collectAsState()
+                val categorias by gastoViewModel.categorias.collectAsState()
+
+                val gasto = uiState.transacciones.find { it.transaccionId == trasaccionId }
+
+                if (gasto != null) {
+                    val categoria = categorias.find { it.categoriaId == gasto.categoriaId }
+                    val categoriaIcono = categoria?.icono ?: "💸"
+                    val categoriaNombre = categoria?.nombre ?: "Sin categoría"
+
+                    GastoDetalleScreen(
+                        transaccionId = trasaccionId,
+                        categoriaIcono = categoriaIcono,
+                        categoriaNombre = categoriaNombre,
+                        onBackClick = { navHostController.popBackStack() },
+                        onEditarClick = {
+                            navHostController.navigate("gasto_editar/$usuarioId/$trasaccionId")
+                        },
+                        onEliminarClick = { /* Mostrar diálogo */ },
+                        onEliminarConfirmado = {
+                            gastoViewModel.eliminarTransaccion(trasaccionId)
+                            navHostController.popBackStack()
+                        }
+                    )
+                }
+            }
+
+            composable(
+                route = "gasto_editar/{usuarioId}/{gastoId}",
+                arguments = listOf(
+                    navArgument("usuarioId") { type = NavType.IntType },
+                    navArgument("gastoId") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
+                val gastoId = backStackEntry.arguments?.getInt("gastoId") ?: 0
+                val gastoViewModel = hiltViewModel<GastoViewModel>()
+                val categoriaViewModel = hiltViewModel<CategoriaViewModel>()
+                val uiState by gastoViewModel.uiState.collectAsState()
+                val categoriaUiState by categoriaViewModel.uiState.collectAsState()
+
+                LaunchedEffect(usuarioId) {
+                    if (usuarioId != 0) {
+                        gastoViewModel.inicializar(usuarioId)
+                        categoriaViewModel.fetchCategorias(usuarioId)
+                    }
+                }
+
+                val transaccion = uiState.transacciones.find { it.transaccionId == gastoId }
+                val categoriasFiltradas = categoriaUiState.categorias
+
+                if (transaccion != null) {
+                    GastoScreen(
+                        categorias = categoriasFiltradas,
+                        tipoInicial = transaccion.tipo,
+                        transaccionParaEditar = transaccion,
+                        usuarioId = usuarioId,
+                        onGuardar = { tipoSeleccionado, monto, categoriaNombre, fechaStr, notas, usuarioIdGuardado ->
+                            val categoriaId = categoriasFiltradas.find { it.nombre == categoriaNombre }?.categoriaId ?: 0
+                            val fechaOffsetDateTime = DateUtil.parseFecha(fechaStr).atOffset(ZoneOffset.UTC)
+
+                            gastoViewModel.actualizarTransaccion(
+                                TransaccionDto(
+                                    transaccionId = transaccion.transaccionId,
+                                    monto = monto,
+                                    categoriaId = categoriaId,
+                                    fecha = fechaOffsetDateTime,
+                                    notas = notas,
+                                    tipo = tipoSeleccionado,
+                                    usuarioId = usuarioIdGuardado
+                                )
+                            )
+
+                            navHostController.navigate("gastos") {
+                                popUpTo("gastos") { inclusive = true }
+                            }
+                        },
+                        onCancel = {
+                            navHostController.popBackStack()
+                        }
+                    )
+                }
+            }
+
+
+
             composable("pagos/{usuarioId}") {
                 val pagoViewModel = hiltViewModel<PagoViewModel>()
                 val categorias by pagoViewModel.categorias.collectAsState()
-                val usuarioId = loginViewModel.uiState.collectAsState().value.usuarioId ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 Log.d("Pagos", "usuarioId en pagos: $usuarioId")
 
                 LaunchedEffect(usuarioId) {
@@ -306,7 +436,11 @@ fun FinTrackerNavHost(
                 arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
             ) { backStackEntry ->
 
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 Log.d("PagoNuevo", "usuarioId recibido en ruta: $usuarioId")
 
                 val pagoViewModel = hiltViewModel<PagoViewModel>()
@@ -357,7 +491,11 @@ fun FinTrackerNavHost(
                     navArgument("pagoId") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 val pagoId = backStackEntry.arguments?.getInt("pagoId") ?: 0
                 Log.d("PagoDetalle", "usuarioId=$usuarioId, pagoId=$pagoId")
 
@@ -408,7 +546,11 @@ fun FinTrackerNavHost(
                     navArgument("pagoId") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 val pagoId = backStackEntry.arguments?.getInt("pagoId") ?: 0
                 Log.d("PagoEditar", "usuarioId=$usuarioId, pagoId=$pagoId")
 
@@ -456,18 +598,24 @@ fun FinTrackerNavHost(
 
             composable("limites/{usuarioId}") {
                 val limiteViewModel = hiltViewModel<LimiteViewModel>()
+                val gastoViewModel = hiltViewModel<GastoViewModel>()
 
-                val usuarioId = loginViewModel.uiState.collectAsState().value.usuarioId ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
 
                 LaunchedEffect(usuarioId) {
                     if (usuarioId != 0) {
                         limiteViewModel.cargarLimites(usuarioId)
                         limiteViewModel.fetchCategorias(usuarioId)
+                        gastoViewModel.inicializar(usuarioId)
                     }
                 }
 
                 LimiteListScreen(
                     viewModel = limiteViewModel,
+                    gastoViewModel = gastoViewModel,
                     onAgregarLimiteClick = {
                         navHostController.navigate("limite_nuevo/$usuarioId")
                     },
@@ -485,7 +633,11 @@ fun FinTrackerNavHost(
                 "limite_nuevo/{usuarioId}",
                 arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 Log.d("LimiteNuevo", "usuarioId recibido en ruta: $usuarioId")
                 val limiteViewModel = hiltViewModel<LimiteViewModel>()
 
@@ -534,16 +686,22 @@ fun FinTrackerNavHost(
                 )
             ) { backStackEntry ->
 
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 val limiteId = backStackEntry.arguments?.getInt("limiteId") ?: 0
                 Log.d("LimiteDetalle", "usuarioId=$usuarioId, limiteId=$limiteId")
 
                 val limiteViewModel = hiltViewModel<LimiteViewModel>()
+                val gastoViewModel = hiltViewModel<GastoViewModel>()
 
                 LaunchedEffect(usuarioId) {
                     if (usuarioId != 0) {
                         limiteViewModel.cargarLimites(usuarioId)
                         limiteViewModel.fetchCategorias(usuarioId)
+                        gastoViewModel.inicializar(usuarioId)
                     }
                 }
 
@@ -565,9 +723,10 @@ fun FinTrackerNavHost(
                             limite = limite,
                             categoriaIcono = categoriaIcono,
                             categoriaNombre = categoriaNombre,
+                            gastoViewModel = gastoViewModel,
                             onBackClick = { navHostController.popBackStack() },
                             onEditarClick = { navHostController.navigate("limite_editar/$usuarioId/$limiteId") },
-                            onEliminarClick = { /* diálogo */ },
+                            onEliminarClick = {  },
                             onEliminarConfirmado = {
                                 limiteViewModel.eliminarLimite(limiteId)
                                 navHostController.navigate("limites/$usuarioId") {
@@ -597,7 +756,11 @@ fun FinTrackerNavHost(
                     navArgument("limiteId") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 val limiteId = backStackEntry.arguments?.getInt("limiteId") ?: 0
                 Log.d("LimiteEditar", "usuarioId=$usuarioId, limiteId=$limiteId")
 
@@ -641,7 +804,6 @@ fun FinTrackerNavHost(
             }
 
 
-            //  LISTA DE METAS
             composable(
                 route = "metaahorros/{usuarioId}",
                 arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
@@ -650,10 +812,9 @@ fun FinTrackerNavHost(
                 val metaViewModel = hiltViewModel<MetaViewModel>()
 
                 LaunchedEffect(usuarioId) {
-                    if (usuarioId != 0) {
-                        metaViewModel.cargarMetas(usuarioId)
-                    }
+                    metaViewModel.cargarMetas(usuarioId)
                 }
+
 
                 MetaListScreen(
                     viewModel = metaViewModel,
@@ -667,7 +828,7 @@ fun FinTrackerNavHost(
                         navHostController.navigate("meta_detalle/$usuarioId/$metaId")
                     },
                     onAgregarMontoClick = { metaId ->
-                        navHostController.navigate("meta_montoahorro/$usuarioId/$metaId")
+                        navHostController.navigate("meta_monto_ahorro/$usuarioId/$metaId")
                     }
                 )
             }
@@ -676,7 +837,11 @@ fun FinTrackerNavHost(
                 route = "meta_nueva/{usuarioId}",
                 arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 val metaViewModel = hiltViewModel<MetaViewModel>()
 
                 MetaScreen(
@@ -701,12 +866,11 @@ fun FinTrackerNavHost(
                         }
                     },
                     onCancel = { navHostController.popBackStack() },
-                    onImagenSeleccionada = { /* manejar imagen si deseas */ },
+                    onImagenSeleccionada = {  },
                 )
             }
 
 
-// DETALLE META
             composable(
                 route = "meta_detalle/{usuarioId}/{metaId}",
                 arguments = listOf(
@@ -714,11 +878,18 @@ fun FinTrackerNavHost(
                     navArgument("metaId") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
                 val metaId = backStackEntry.arguments?.getInt("metaId") ?: 0
                 val metaViewModel = hiltViewModel<MetaViewModel>()
                 val uiState by metaViewModel.uiState.collectAsState()
-                val meta = uiState.metas.find { it.metaAhorroId == metaId }
+                val meta = uiState.metaSeleccionada
+
+                LaunchedEffect(usuarioId, metaId) {
+                    metaViewModel.cargarMetas(usuarioId, metaId)
+                }
 
                 meta?.let {
                     MetaDetalleScreen(
@@ -727,7 +898,7 @@ fun FinTrackerNavHost(
                         onEditarClick = {
                             navHostController.navigate("meta_editar/$usuarioId/$metaId")
                         },
-                        onEliminarClick = { /* Mostrar confirmación */ },
+                        onEliminarClick = {  },
                         onEliminarConfirmado = {
                             metaViewModel.eliminarMeta(metaId)
                             navHostController.navigate("metaahorros/$usuarioId") {
@@ -738,7 +909,6 @@ fun FinTrackerNavHost(
                 }
             }
 
-// EDITAR META
             composable(
                 route = "meta_editar/{usuarioId}/{metaId}",
                 arguments = listOf(
@@ -746,11 +916,19 @@ fun FinTrackerNavHost(
                     navArgument("metaId") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
                 val metaId = backStackEntry.arguments?.getInt("metaId") ?: 0
                 val metaViewModel = hiltViewModel<MetaViewModel>()
                 val uiState by metaViewModel.uiState.collectAsState()
-                val meta = uiState.metas.find { it.metaAhorroId == metaId }
+                val meta = uiState.metaSeleccionada
+                LaunchedEffect(usuarioId, metaId) {
+                    metaViewModel.setUsuarioId(usuarioId)
+                    metaViewModel.cargarMetas(usuarioId, metaId)
+                }
 
                 meta?.let {
                     MetaScreen(
@@ -771,23 +949,80 @@ fun FinTrackerNavHost(
                             }
                         },
                         onCancel = { navHostController.popBackStack() },
-                        onImagenSeleccionada = { /* imagen */ }
+                        onImagenSeleccionada = {  }
                     )
                 }
             }
 
-            composable("chatIA/{usuarioId}") { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getString("usuarioId") ?: ""
+            composable(
+                route = "meta_monto_ahorro/{usuarioId}/{metaId}",
+                arguments = listOf(
+                    navArgument("usuarioId") { type = NavType.IntType },
+                    navArgument("metaId") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+                val metaId = backStackEntry.arguments?.getInt("metaId") ?: 0
+
+                val metaViewModel = hiltViewModel<MetaViewModel>()
+
+                val uiState by metaViewModel.uiState.collectAsState()
+                LaunchedEffect(usuarioId, metaId) {
+                    metaViewModel.setUsuarioId(usuarioId)
+                    metaViewModel.cargarMetas(usuarioId, metaId)
+                }
+
+
+                val meta = metaViewModel.obtenerMetas(metaId) ?: MetaAhorroDto(
+                    metaAhorroId = 0,
+                    nombreMeta = "",
+                    montoObjetivo = 0.0,
+                    fechaFinalizacion = OffsetDateTime.now(),
+                    usuarioId = usuarioId
+                )
+
+                MetaMAhorroScreen(
+                    meta = meta,
+                    onGuardarMonto = { montoAhorrado, fechaMonto ->
+                        metaViewModel.actualizarMontoAhorrado(meta.metaAhorroId, montoAhorrado, fechaMonto)
+                        navHostController.popBackStack()
+                    },
+                    onCancel = {
+                        navHostController.popBackStack()
+                    }
+                )
+            }
+
+
+            composable(
+                route = "chatIA/{usuarioId}",
+                arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
                 ChatIaScreen(
                     navController = navHostController,
                     usuarioId = usuarioId
                 )
             }
 
+            composable("cambiarFoto/{usuarioId}") { backStackEntry ->
+                val usuarioId = backStackEntry.arguments?.getString("usuarioId")?.toInt() ?: 0
+                CambiarFotoScreen(
+                    usuarioId = usuarioId,
+                    onNavigateBack = { navHostController.popBackStack() }
+                )
+            }
 
-            // En tu NavHost, el composable de ajustes ahora es más simple:
+
             composable("ajustes/{usuarioId}") { backStackEntry ->
-                val usuarioId = backStackEntry.arguments?.getString("usuarioId")?.toIntOrNull() ?: 0
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+                val scope = rememberCoroutineScope()
 
                 AjustesListScreen(
                     navController = navHostController,
@@ -799,8 +1034,11 @@ fun FinTrackerNavHost(
                         navHostController.navigate("cambiar_contrasena/$usuarioId")
                     },
                     onCerrarSesion = {
-                        navHostController.navigate("login") {
-                            popUpTo(0) { inclusive = true }
+                        scope.launch {
+                            DataLogin.limpiarSesion(context)
+                            navHostController.navigate("login") {
+                                popUpTo(0) { inclusive = true }
+                            }
                         }
                     },
                     onNotificaciones = {
@@ -818,18 +1056,109 @@ fun FinTrackerNavHost(
                 )
             }
 
+            composable(
+                route = "notificaciones/{usuarioId}",
+                arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
+                NotificacionesScreen(
+                    navController = navHostController,
+                    usuarioId = usuarioId
+                )
+            }
+
+            composable(
+                route = "apariencia/{usuarioId}",
+                arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val context = LocalContext.current
+                val usuarioId by produceState(initialValue = 0) {
+                    value = DataLogin.obtenerUsuarioId(context) ?: 0
+                }
+
+                AparienciaScreen(
+                    navController = navHostController,
+                    usuarioId = usuarioId
+                )
+            }
+
+            composable("cambiar_contrasena/{usuarioId}") { backStackEntry ->
+                val usuarioId = backStackEntry.arguments?.getString("usuarioId")?.toIntOrNull() ?: 0
+
+                CambiarContrasenaScreen(
+                    usuarioId = usuarioId,
+                    onBack = {
+                        navHostController.popBackStack()
+                    }
+                )
+            }
+
             composable("panel_usuario/{usuarioId}") { backStackEntry ->
                 val usuarioId = backStackEntry.arguments?.getString("usuarioId")?.toIntOrNull() ?: 0
 
                 PanelUsuarioScreen(
                     navController = navHostController,
                     usuarioId = usuarioId,
-                    onAjustes = { navHostController.navigate("ajustes/$usuarioId") },
-                    onTransacciones = { navHostController.navigate("gastos") },
+                    onCambiarContrasenaClick = {
+                        navHostController.navigate("cambiar_contrasena/$usuarioId") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onCambiarFoto = {
+                        navHostController.navigate("cambiarFoto/$usuarioId")                    },
+                    onDivisa = {
+                        // Implementar lógica para cambiar divisa
+                    },
+                    onAjustes = {
+                        navHostController.navigate("ajustes/$usuarioId")
+                    },
+                    onTransacciones = {
+                        navHostController.navigate("gastos")
+                    }
                 )
             }
 
+            composable(
+                route = "grafico/{usuarioId}",
+                arguments = listOf(navArgument("usuarioId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val usuarioId = backStackEntry.arguments?.getInt("usuarioId") ?: 0
+                Log.d("GraficoComposable", "usuarioId recibido: $usuarioId")
+
+                val gastoViewModel = hiltViewModel<GastoViewModel>()
+
+                LaunchedEffect(usuarioId) {
+                    if (usuarioId != 0) {
+                        gastoViewModel.inicializar(usuarioId)
+                    }
+                }
+
+                if (usuarioId != 0) {
+                    GraficoScreen(
+                        usuarioId = usuarioId,
+                        gastoviewModel = hiltViewModel(),
+                        onBackClick = {
+                            navHostController.popBackStack()
+                        }
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Cargando usuario...")
+                    }
+                }
+            }
+
+
+
         }
+
     }
 
 }
